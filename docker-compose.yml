@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+#  mysql:
+#    image: mysql:8.0
+#    container_name: mysql-container
+#    command: --default-authentication-plugin=mysql_native_password
+#    environment:
+#      MYSQL_ROOT_PASSWORD: password
+#      MYSQL_DATABASE: keycloak
+#      MYSQL_USER: keycloak_user
+#      MYSQL_PASSWORD: password
+#    ports:
+#      - "3307:3306"
+#    restart: always
+#    networks:
+#      - mysql-network
+
+#  phpmyadmin:
+#    image: phpmyadmin/phpmyadmin
+#    container_name: phpmyadmin-container
+#    environment:
+#      PMA_HOST: mysql
+#      PMA_PORT: 3306
+#    depends_on:
+#      - mysql
+#    ports:
+#      - "80:80"
+#    restart: always
+#    networks:
+#      - mysql-network
+
+  keycloak:
+    container_name: keycloak-container-with-spi
+    image: quay.io/keycloak/keycloak:23.0.3
+    restart: always
+    command:
+      - start-dev
+      - --spi-events-listener-custom-event-listener-api-endpoint=http://host.docker.internal:4040/register
+      - --spi-events-listener-custom-event-listener-api-max-connections=3
+      - --spi-events-listener-custom-event-listener-api-socket-timeout=4500
+      - --spi-events-listener-custom-event-listener-api-connect-timeout=1000
+      - --spi-events-listener-custom-event-listener-api-connection-request-timeout=1000
+      - --spi-events-listener-custom-event-listener-http-stats-interval=5
+      - --import-realm
+    environment:
+#      DB_VENDOR: MYSQL
+#      DB_ADDR: mysql
+#      DB_DATABASE: keycloak
+#      DB_USER: keycloak_user
+#      DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      API_MAX_CONNECTIONS: 3
+      API_SOCKET_TIMEOUT: 4500
+      API_CONNECT_TIMEOUT: 1000
+      API_CONNECTION_REQUEST_TIMEOUT: 1000
+      HTTP_STATS_INTERVAL: 5
+    volumes:
+      - ./realm.json:/data/import/realm.json
+      - ./target/keycloak-custom-listener.jar:/opt/keycloak/providers/custom-event-listener.jar
+#      - ./startup-scripts/:/opt/keycloak/startup-scripts/
+    ports:
+      - 18080:8080
+#    depends_on:
+#      - mysql
+    networks:
+      - mysql-network
+
+
+  mmock:
+    container_name: mmoock-api-container
+    image: jordimartin/mmock
+    restart: always
+    networks:
+      - mysql-network
+    volumes:
+      - ./mmock-config/:/config/
+    ports:
+      - 8020:8082
+      - 8030:8083
+
+networks:
+  mysql-network:
+    driver: bridge
